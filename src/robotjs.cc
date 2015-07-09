@@ -285,13 +285,13 @@ int CheckKeyFlags(char* f, MMKeyFlags* flags)
 
 int mssleep(unsigned long millisecond)
 {
-	struct timespec req;
+	/*struct timespec req;
 	time_t sec=(int)(millisecond/1000);
 	millisecond=millisecond-(sec*1000);
 	req.tv_sec=sec;
 	req.tv_nsec=millisecond*1000000L;
 	while(nanosleep(&req,&req)==-1)
-		continue;
+		continue;*/
 	return 1;
 }
 
