@@ -449,7 +449,7 @@ NAN_METHOD(getPixelColor)
 
 	//Length needs to be 7 because snprintf includes a terminating null.
 	//Use %06x to pad hex value with leading 0s. 
-	snprintf(hex, 7, "%06x", color);
+	//snprintf(hex, 7, "%06x", color);
 
 	destroyMMBitmap(bitmap);
 
