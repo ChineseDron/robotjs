@@ -44,7 +44,11 @@
         'sources': [
           'src/xdisplay.c'
         ]
-      }]
+      }],
+    ["OS=='win'", {
+    'defines': [
+      'IS_WINDOWS']
+    }]
     ],
     
     'sources': [
