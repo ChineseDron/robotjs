@@ -8,8 +8,14 @@
 #include "screen.h"
 #include "screengrab.h"
 #include "MMBitmap.h"
+#include "snprintf.h"
+#include "microsleep.h"
 
 using namespace v8;
+
+//Global delays.
+int mouseDelay = 10;
+int keyboardDelay = 10;
 
 /*
  __  __                      
@@ -33,6 +39,8 @@ NAN_METHOD(moveMouse)
 	MMPoint point;
 	point = MMPointMake(x, y);
 	moveMouse(point);
+	microsleep(mouseDelay);
+
 	NanReturnValue(NanNew("1"));
 }
 
@@ -49,6 +57,8 @@ NAN_METHOD(moveMouseSmooth)
 	MMPoint point;
 	point = MMPointMake(x, y);
 	smoothlyMoveMouse(point);
+	microsleep(mouseDelay);
+
 	NanReturnValue(NanNew("1"));
 }
 
@@ -60,8 +70,8 @@ NAN_METHOD(getMousePos)
 
  	//Return object with .x and .y.
 	Local<Object> obj = NanNew<Object>();
-	obj->Set(NanNew<String>("x"), NanNew<Number>(pos.x));
-	obj->Set(NanNew<String>("y"), NanNew<Number>(pos.y));
+	obj->Set(NanNew<String>("x"), NanNew<Integer>((int)pos.x));
+	obj->Set(NanNew<String>("y"), NanNew<Integer>((int)pos.y));
 	NanReturnValue(obj);
 }
 
@@ -70,10 +80,14 @@ NAN_METHOD(mouseClick)
 	NanScope();
 
 	MMMouseButton button = LEFT_BUTTON;
+	bool doubleC = false;
 
-	if (args.Length() == 1)
+	if (args.Length() > 0)
 	{
-		char *b = (*v8::String::Utf8Value(args[0]->ToString()));
+		char *b;
+
+		v8::String::Utf8Value bstr(args[0]->ToString());
+		b = *bstr;
 
 		if (strcmp(b, "left") == 0)
 		{
@@ -92,12 +106,27 @@ NAN_METHOD(mouseClick)
 			return NanThrowError("Invalid mouse button specified."); 
 		}
 	}
-	else if (args.Length() > 1)
+	
+	if (args.Length() == 2)
+	{
+		doubleC = args[1]->BooleanValue();
+	}
+	else if (args.Length() > 2)
 	{
 		return NanThrowError("Invalid number of arguments.");
 	}
+	
+	if (!doubleC)
+	{
+		clickMouse(button);
+		
+	}
+	else
+	{
+		doubleClick(button);
+	}
 
-	clickMouse(button);
+	microsleep(mouseDelay);
 
 	NanReturnValue(NanNew("1"));
 }
@@ -154,6 +183,21 @@ NAN_METHOD(mouseToggle)
 	}
 
 	toggleMouse(down, button);
+	microsleep(mouseDelay);
+
+	NanReturnValue(NanNew("1"));
+}
+
+NAN_METHOD(setMouseDelay) 
+{
+	NanScope();
+
+	if (args.Length() != 1) 
+	{
+		return NanThrowError("Invalid number of arguments."); 
+	}
+
+	mouseDelay = args[0]->Int32Value();
 
 	NanReturnValue(NanNew("1"));
 }
@@ -239,6 +283,58 @@ int CheckKeyCodes(char* k, MMKeyCode *key)
 	{
 		*key = K_PAGEDOWN;
 	}
+	else if (strcmp(k, "space") == 0)
+	{
+		*key = K_SPACE;
+	}
+	else if (strcmp(k, "f1") == 0)
+	{
+		*key = K_F1;
+	}
+	else if (strcmp(k, "f2") == 0)
+	{
+		*key = K_F2;
+	}
+	else if (strcmp(k, "f3") == 0)
+	{
+		*key = K_F3;
+	}
+	else if (strcmp(k, "f4") == 0)
+	{
+		*key = K_F4;
+	}
+	else if (strcmp(k, "f5") == 0)
+	{
+		*key = K_F5;
+	}
+	else if (strcmp(k, "f6") == 0)
+	{
+		*key = K_F6;
+	}
+	else if (strcmp(k, "f7") == 0)
+	{
+		*key = K_F7;
+	}
+	else if (strcmp(k, "f8") == 0)
+	{
+		*key = K_F8;
+	}
+	else if (strcmp(k, "f9") == 0)
+	{
+		*key = K_F9;
+	}
+	else if (strcmp(k, "f10") == 0)
+	{
+		*key = K_F10;
+	}
+	else if (strcmp(k, "f11") == 0)
+	{
+		*key = K_F11;
+	}
+	else if (strcmp(k, "f12") == 0)
+	{
+		*key = K_F12;
+	}
 	else if (strlen(k) == 1)
 	{
 		*key = keyCodeForChar(*k); 
@@ -281,18 +377,6 @@ int CheckKeyFlags(char* f, MMKeyFlags* flags)
   	}
 
 	return 0;
-}
-
-int mssleep(unsigned long millisecond)
-{
-	struct timespec req;
-	time_t sec=(int)(millisecond/1000);
-	millisecond=millisecond-(sec*1000);
-	req.tv_sec=sec;
-	req.tv_nsec=millisecond*1000000L;
-	while(nanosleep(&req,&req)==-1)
-		continue;
-	return 1;
 }
 
 NAN_METHOD(keyTap) 
@@ -344,7 +428,7 @@ NAN_METHOD(keyTap)
 			break;
 		default:
 			tapKeyCode(key, flags);
-			mssleep(10);
+			microsleep(keyboardDelay);
 	}
 
 	NanReturnValue(NanNew("1"));
@@ -402,7 +486,7 @@ NAN_METHOD(keyToggle)
 			break;
 		default:
 			toggleKeyCode(key, down, flags);
-      		mssleep(10);
+      		microsleep(keyboardDelay);
 	}
 
 	NanReturnValue(NanNew("1"));
@@ -418,6 +502,20 @@ NAN_METHOD(typeString)
 	str = *string;
 
 	typeString(str);
+
+	NanReturnValue(NanNew("1"));
+}
+
+NAN_METHOD(setKeyboardDelay) 
+{
+	NanScope();
+	
+	if (args.Length() != 1) 
+	{
+		return NanThrowError("Invalid number of arguments."); 
+	}
+
+	keyboardDelay = args[0]->Int32Value();
 
 	NanReturnValue(NanNew("1"));
 }
@@ -445,7 +543,7 @@ NAN_METHOD(getPixelColor)
 
 	color = MMRGBHexAtPoint(bitmap, 0, 0);
 	
-	char hex [6];
+	char hex [7];
 
 	//Length needs to be 7 because snprintf includes a terminating null.
 	//Use %06x to pad hex value with leading 0s. 
@@ -490,6 +588,9 @@ void init(Handle<Object> target)
 	target->Set(NanNew<String>("mouseToggle"),
 		NanNew<FunctionTemplate>(mouseToggle)->GetFunction());
 
+	target->Set(NanNew<String>("setMouseDelay"),
+		NanNew<FunctionTemplate>(setMouseDelay)->GetFunction());
+
 	target->Set(NanNew<String>("keyTap"),
 		NanNew<FunctionTemplate>(keyTap)->GetFunction());
 	
@@ -498,6 +599,9 @@ void init(Handle<Object> target)
 
 	target->Set(NanNew<String>("typeString"),
 		NanNew<FunctionTemplate>(typeString)->GetFunction());
+
+	target->Set(NanNew<String>("setKeyboardDelay"),
+		NanNew<FunctionTemplate>(setKeyboardDelay)->GetFunction());
 
 	target->Set(NanNew<String>("getPixelColor"),
 		NanNew<FunctionTemplate>(getPixelColor)->GetFunction());
